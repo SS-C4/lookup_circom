@@ -117,4 +117,4 @@ template accumulate(asize) {
     newI[asize] <== i;
 }
 
-component main = indexed_lookup(2, 4);
+// component main = indexed_lookup(2, 4);
