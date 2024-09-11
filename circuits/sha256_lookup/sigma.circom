@@ -18,14 +18,13 @@
 */
 pragma circom 2.0.0;
 
-// include "xor3.circom";
+include "xor3.circom";
 include "rotate.circom";
 include "shift.circom";
-include "random_tables.circom";
 
 template SmallSigma(ra, rb, rc) {
-    signal input in[8];
-    signal output out[8];
+    signal input in[32];
+    signal output out[32];
     var k;
 
     component rota = RotR(32, ra);

@@ -255,4 +255,97 @@ template Lookup_ssigma0() {
     assert (out_sum == ssigma0(x));
 }
 
-component main = Lookup_ssigma0();
+template call_ssigma0() {
+    signal input x[64];
+    signal output out[64];
+
+    signal x_nibbles[64 * 8];
+    
+    var A[3][64 * 8];
+    var I[3][64 * 8];
+    var T[4][256];
+    var M[4][256];
+
+    var xor_A[64 * 16];
+    var xor_I[64 * 16];
+
+    var alpha[4] = [1033, 1034, 1035, 1036];
+
+    // Define tables
+    for (var i=0; i<3; i++) {
+        for (var j=0; j<256; j++) {
+            T[i][j] = table_function(j, i);
+        }
+    }
+    for (var j=0; j<256; j++) {
+        T[3][j] = xor_function(j);
+    }
+
+    // Accumulation
+    for (var k=0; k<64; k++) {
+        for (var i=0; i<8; i++) {
+            x_nibbles[k*8 + i] <-- (x[k] >> 4*i) & 15;
+        }
+
+        // Recomposition
+        var sum = 0;
+        for (var i=0; i<8; i++) {
+            sum += x_nibbles[k*8 + i] * 16**i;
+        }
+        sum === x[k];
+
+        for (var i=0; i<3; i++) {
+            for (var j=0; j<8; j++) {
+                A[i][k*8 + j] = table_function(x_nibbles[k*8 + j], i);
+                I[i][k*8 + j] = x_nibbles[k*8 + j];
+            }
+        }
+
+        // xors
+        for (var j=0; j<8; j++) {
+            xor_I[k*16 + j] = table_function(x_nibbles[k*8 + j], 0) + table_function(x_nibbles[k*8 + j], 1) * 16;
+            xor_A[k*16 + j] = table_function(x_nibbles[k*8 + j], 0) ^ table_function(x_nibbles[k*8 + j], 1);
+
+            xor_I[k*16 + 8 + j] = table_function(x_nibbles[k*8 + j], 2) + xor_A[k*16 + j] * 16;
+            xor_A[k*16 + 8 + j] = table_function(x_nibbles[k*8 + j], 2) ^ xor_A[k*16 + j];
+        }
+    }    
+
+    // Lookup
+    for (var i=0; i<3; i++) {
+        M[i] = multiplicity_generator(I[i], A[i], 64 * 8, T[i]);
+    }
+    M[3] = multiplicity_generator(xor_I, xor_A, 64 * 16, T[3]);
+
+    component id_lookup[3];
+    for (var i=0; i<3; i++) {
+        id_lookup[i] = indexed_lookup(64 * 8, 256);
+
+        id_lookup[i].alpha <== alpha[i];
+        id_lookup[i].A <-- A[i];
+        id_lookup[i].I <-- I[i];
+        id_lookup[i].T <== T[i];
+        id_lookup[i].M <-- M[i];
+        out[i] <== id_lookup[i].out;
+    }
+
+    component xor_lookup = indexed_lookup(64 * 16, 256);
+    xor_lookup.alpha <== alpha[3];
+    xor_lookup.A <-- xor_A;
+    xor_lookup.I <-- xor_I;
+    xor_lookup.T <== T[3];
+    xor_lookup.M <-- M[3];
+    out[3] <== xor_lookup.out;
+
+    // Recomposition
+    for (var k=0; k<64; k++) {
+        var out_sum = 0;
+        for (var i=0; i<8; i++) {
+            out_sum += xor_A[k*16 + 8 + i] * 16**i;
+        }
+        assert(out_sum == ssigma0(x[k]));
+    }
+
+}
+
+component main = call_ssigma0();
