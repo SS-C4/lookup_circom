@@ -110,64 +110,11 @@ function ssigma1(x) {
 }
 
 function Maj(x, y, z) {
-    // return (x&y) ^ (x&z) ^ (y&z);
-    var x_nibbles[8];
-    var y_nibbles[8];
-    var z_nibbles[8];
-
-    for (var i=0; i<8; i++) {
-        x_nibbles[i] = (x >> 4*i) & 15;
-        y_nibbles[i] = (y >> 4*i) & 15;
-        z_nibbles[i] = (z >> 4*i) & 15;
-    }
-    var index1[8];
-    var out1_nibbles[8];
-    for (var i=0; i<8; i++) {
-        index1[i] = x_nibbles[i] + y_nibbles[i]*16;
-        out1_nibbles[i] = table_function(index1[i], 6);
-    }
-    var index2[8];
-    var out2_nibbles[8];
-    for (var i=0; i<8; i++) {
-        index2[i] = out1_nibbles[i] + z_nibbles[i]*16;
-        out2_nibbles[i] = table_function(index2[i], 7);
-    }
-    var out = 0;
-    for (var i=0; i<8; i++) {
-        out += out2_nibbles[i] << 4*i;
-    }
-    return out;
+    return (x&y) ^ (x&z) ^ (y&z);
 }
 
 function Ch(x, y, z) {
-    // return (x & y) ^ ((0xFFFFFFFF ^x) & z);
-    var x_nibbles[8];
-    var y_nibbles[8];
-    var z_nibbles[8];
-
-    for (var i=0; i<8; i++) {
-        x_nibbles[i] = (x >> 4*i) & 15;
-        y_nibbles[i] = (y >> 4*i) & 15;
-        z_nibbles[i] = (z >> 4*i) & 15;
-    }
-    var index1[8];
-    var out1_nibbles[8];
-    for (var i=0; i<8; i++) {
-        index1[i] = x_nibbles[i] + y_nibbles[i]*16;
-        out1_nibbles[i] = table_function(index1[i], 4);
-    }
-    var index2[8];
-    var out2_nibbles[8];
-    for (var i=0; i<8; i++) {
-        index2[i] = out1_nibbles[i] + z_nibbles[i]*16;
-        out2_nibbles[i] = table_function(index2[i], 5);
-    }
-    var out = 0;
-    for (var i=0; i<8; i++) {
-        out += out2_nibbles[i] << 4*i;
-    }
-    return out;
-
+    return (x & y) ^ ((0xFFFFFFFF ^x) & z);
 }
 
 function sha256K(i) {

@@ -99,3 +99,51 @@ template BinSum(n, ops) {
 
     lin === lout;
 }
+
+template BinSum_Lookup(ops) {
+    signal input in[ops][8];
+    signal output out[16];
+
+    signal output range_I[8];
+    signal output range_A[8];
+
+    var in_int[ops];
+    for (var i=0; i<ops; i++) {
+        in_int[i] = 0;
+        for (var j=0; j<8; j++) {
+            in_int[i] += in[i][j] * (1 << 4*j);
+        }
+    }
+
+    var sum = 0;
+    for (var i=0; i<ops; i++) {
+        sum += in_int[i];
+    }
+
+    // Get rem and quotient
+    signal rem;
+    rem <-- sum % (2 ** 32);
+    signal quotient;
+    quotient <-- sum \ (2 ** 32);
+
+    // Constraint for sum = rem + 2^32 * quotient
+    sum === rem + 2 ** 32 * quotient;
+
+    // Decompose into nibbles
+    for (var i=0; i<8; i++) {
+        range_I[i] <-- (rem >> 4*i) & 15;
+        range_A[i] <-- range_I[i];
+    }
+
+    // Recomposition constraint
+    var rec_sum = 0;
+    for (var i=0; i<8; i++) {
+        rec_sum += range_A[i] * (1 << 4*i);
+    }
+    rec_sum === rem;
+
+    for (var i=0; i<8; i++) {
+        out[i] <-- range_A[i];
+    }
+    
+}
