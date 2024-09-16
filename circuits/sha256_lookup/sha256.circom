@@ -79,3 +79,5 @@ template Sha256(nNibbles) {
     }
 
 }
+
+component main = Sha256(64);

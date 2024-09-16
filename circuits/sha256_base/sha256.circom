@@ -79,3 +79,5 @@ template Sha256(nBits) {
     }
 
 }
+
+component main = Sha256(256);

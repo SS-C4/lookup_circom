@@ -3,7 +3,7 @@
 //    signal output out[256];
 pragma circom 2.0.0;
 
-include "random_tables.circom"
+include "random_tables.circom";
 
 function rrot(x, n) {
     return ((x >> n) | (x << (32-n))) & 0xFFFFFFFF;

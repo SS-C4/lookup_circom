@@ -18,7 +18,7 @@
 */
 pragma circom 2.0.0;
 
-// include "../binsum.circom";
+include "../binsum.circom";
 // include "sigma.circom";
 
 // template SigmaPlus() {
@@ -152,22 +152,22 @@ template SigmaPlus() {
 
     // Update random_I_0 and random_A_0
     for (k=0; k<8; k++) {
-        random_I_0[0][k] <-- ssigma0.random_I_0[0][k];
-        random_I_0[1][k] <-- ssigma0.random_I_0[1][k];
-        random_I_0[2][k] <-- ssigma0.random_I_0[2][k];
-        random_I_0[3][k] <-- ssigma1.random_I_0[0][k];
-        random_I_0[4][k] <-- ssigma1.random_I_0[1][k];
-        random_I_0[5][k] <-- ssigma1.random_I_0[2][k];
+        random_I_0[0][k] <-- sigma0.random_I_0[0][k];
+        random_I_0[1][k] <-- sigma0.random_I_0[1][k];
+        random_I_0[2][k] <-- sigma0.random_I_0[2][k];
+        random_I_0[3][k] <-- sigma1.random_I_0[0][k];
+        random_I_0[4][k] <-- sigma1.random_I_0[1][k];
+        random_I_0[5][k] <-- sigma1.random_I_0[2][k];
 
-        random_A_0[0][k] <-- ssigma0.random_A_0[0][k];
-        random_A_0[1][k] <-- ssigma0.random_A_0[1][k];
-        random_A_0[2][k] <-- ssigma0.random_A_0[2][k];
-        random_A_0[3][k] <-- ssigma1.random_A_0[0][k];
-        random_A_0[4][k] <-- ssigma1.random_A_0[1][k];
-        random_A_0[5][k] <-- ssigma1.random_A_0[2][k];
+        random_A_0[0][k] <-- sigma0.random_A_0[0][k];
+        random_A_0[1][k] <-- sigma0.random_A_0[1][k];
+        random_A_0[2][k] <-- sigma0.random_A_0[2][k];
+        random_A_0[3][k] <-- sigma1.random_A_0[0][k];
+        random_A_0[4][k] <-- sigma1.random_A_0[1][k];
+        random_A_0[5][k] <-- sigma1.random_A_0[2][k];
     }
 
-    component sum = BinSum_Lookup(8, 4);
+    component sum = BinSum_Lookup(4);
 
     for (k=0; k<8; k++) {
         sum.in[0][k] <== sigma1.out[k];

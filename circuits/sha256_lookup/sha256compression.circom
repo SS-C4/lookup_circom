@@ -28,11 +28,42 @@ include "sha256compression_function.circom";
 include "../lookup.circom";
 include "random_tables.circom";
 
+function multiplicity_generator_256(I, A, len, T) {
+    var M[256];
+    for (var i=0; i<256; i++) {
+        M[i] = 0;
+    }
+    for (var i=0; i<256; i++) {
+        for (var j=0; j<len; j++) {
+            if (I[j] == i && A[j] == T[i]) {
+                M[i] += 1;
+            }
+        }
+    }
+    return M;
+}
+
+function multiplicity_generator_16(I, A, len, T) {
+    var M[16];
+    for (var i=0; i<16; i++) {
+        M[i] = 0;
+    }
+    for (var i=0; i<16; i++) {
+        for (var j=0; j<len; j++) {
+            if (I[j] == i && A[j] == T[i]) {
+                M[i] += 1;
+            }
+        }
+    }
+    return M;
+}
 
 template Sha256compression() {
     signal input hin[64];
     signal input inp[128];
     signal output out[64];
+    signal output lookup_out[16];
+
     signal a[65][8];
     signal b[65][8];
     signal c[65][8];
@@ -94,14 +125,14 @@ template Sha256compression() {
     var range_M[16];
     var and_M[256];
 
-    var xor_I[32*48 + 24*64 + 16*64];
-    var xor_A[32*48 + 24*64 + 16*64];
+    var xor_I[32*48 + 24*64 + 32*64];
+    var xor_A[32*48 + 24*64 + 32*64];
 
     var not_I[8*64];
     var not_A[8*64];
 
-    var range_I[48*64];
-    var range_A[48*64];
+    var range_I[8*48 + 32*64 + 8*8];
+    var range_A[8*48 + 32*64 + 8*8];
 
     var and_I[40*64];
     var and_A[40*64];
@@ -132,21 +163,21 @@ template Sha256compression() {
     // 3 random tables
     // 8 lookups into each table * 64 rounds
     // + 24 lookups for and * 64 rounds
-    // + 16 lookups for xor * 64 rounds
+    // + 16 + 16 lookups for xor * 64 rounds
     // + 8 lookups for range * 64 rounds
     for (i=0; i<64; i++) t2[i] = T2();
 
     component suma[64];
     // + 8 lookups for range * 64 rounds
-    for (i=0; i<64; i++) suma[i] = BinSum(32, 2);
+    for (i=0; i<64; i++) suma[i] = BinSum_Lookup(2);
 
     component sume[64];
     // + 8 lookups for range * 64 rounds
-    for (i=0; i<64; i++) sume[i] = BinSum(32, 2);
+    for (i=0; i<64; i++) sume[i] = BinSum_Lookup(2);
 
     component fsum[8];
-    // + 8 lookups for range * 64 rounds
-    for (i=0; i<8; i++) fsum[i] = BinSum(32, 2);
+    // + 8 lookups for range * 8 rounds
+    for (i=0; i<8; i++) fsum[i] = BinSum_Lookup(2);
 
     var k;
     var t;
@@ -167,6 +198,35 @@ template Sha256compression() {
             for (k=0; k<8; k++) {
                 w[t][k] <== sigmaPlus[t-16].out[k];
             }
+        }
+    }
+
+    // Update SigmaPlus I and A
+    for (t=0; t<48; t++) {
+        for (k=0; k<8; k++) {
+            random_I_0[0][t*8+k] = sigmaPlus[t].random_I_0[0][k];
+            random_I_0[1][t*8+k] = sigmaPlus[t].random_I_0[1][k];
+            random_I_0[2][t*8+k] = sigmaPlus[t].random_I_0[2][k];
+            random_I_0[3][t*8+k] = sigmaPlus[t].random_I_0[3][k];
+            random_I_0[4][t*8+k] = sigmaPlus[t].random_I_0[4][k];
+            random_I_0[5][t*8+k] = sigmaPlus[t].random_I_0[5][k];
+
+            random_A_0[0][t*8+k] = sigmaPlus[t].random_A_0[0][k];
+            random_A_0[1][t*8+k] = sigmaPlus[t].random_A_0[1][k];
+            random_A_0[2][t*8+k] = sigmaPlus[t].random_A_0[2][k];
+            random_A_0[3][t*8+k] = sigmaPlus[t].random_A_0[3][k];
+            random_A_0[4][t*8+k] = sigmaPlus[t].random_A_0[4][k];
+            random_A_0[5][t*8+k] = sigmaPlus[t].random_A_0[5][k];
+        }
+
+        for (k=0; k<32; k++) {
+            xor_I[t*32+k] = sigmaPlus[t].xor_I[k];
+            xor_A[t*32+k] = sigmaPlus[t].xor_A[k];
+        }
+
+        for (k=0; k<8; k++) {
+            range_I[t*8+k] = sigmaPlus[t].range_I[k];
+            range_A[t*8+k] = sigmaPlus[t].range_A[k];
         }
     }
 
@@ -195,12 +255,71 @@ template Sha256compression() {
             t2[t].c[k] <== c[t][k];
         }
 
+        // Update T1 and T2 I and A
+        for (k=0; k<8; k++) {
+            random_I_1[0][t*8+k] = t1[t].random_I_1[0][k];
+            random_I_1[1][t*8+k] = t1[t].random_I_1[1][k];
+            random_I_1[2][t*8+k] = t1[t].random_I_1[2][k];
+            random_I_1[3][t*8+k] = t2[t].random_I_1[0][k];
+            random_I_1[4][t*8+k] = t2[t].random_I_1[1][k];
+            random_I_1[5][t*8+k] = t2[t].random_I_1[2][k];
+
+            random_A_1[0][t*8+k] = t1[t].random_A_1[0][k];
+            random_A_1[1][t*8+k] = t1[t].random_A_1[1][k];
+            random_A_1[2][t*8+k] = t1[t].random_A_1[2][k];
+            random_A_1[3][t*8+k] = t2[t].random_A_1[0][k];
+            random_A_1[4][t*8+k] = t2[t].random_A_1[1][k];
+            random_A_1[5][t*8+k] = t2[t].random_A_1[2][k];
+        }
+
+        for (k=0; k<24; k++) {
+            xor_I[32*48 + t*24 + k] = t1[t].xor_I[k];
+            xor_A[32*48 + t*24 + k] = t1[t].xor_A[k];
+        }
+        for (k=0; k<32; k++) {
+            xor_I[32*48 + 24*64 + t*32 + k] = t2[t].xor_I[k];
+            xor_A[32*48 + 24*64 + t*32 + k] = t2[t].xor_A[k];
+        }
+
+        for (k=0; k<8; k++) {
+            not_I[t*8+k] = t1[t].not_I[k];
+            not_A[t*8+k] = t1[t].not_A[k];
+        }
+
+        for (k=0; k<16; k++) {
+            and_I[t*16+k] = t1[t].and_I[k];
+            and_A[t*16+k] = t1[t].and_A[k];
+        }
+        for (k=0; k<24; k++) {
+            and_I[16*64 + t*24 + k] = t2[t].and_I[k];
+            and_A[16*64 + t*24 + k] = t2[t].and_A[k];
+        }
+
+        for (k=0; k<8; k++) {
+            range_I[8*48 + t*8 + k] = t1[t].range_I[k];
+            range_A[8*48 + t*8 + k] = t1[t].range_A[k];
+        }
+        for (k=0; k<8; k++) {
+            range_I[8*48 + 8*64 + t*8 + k] = t2[t].range_I[k];
+            range_A[8*48 + 8*64 + t*8 + k] = t2[t].range_A[k];
+        }
+
         for (k=0; k<8; k++) {
             sume[t].in[0][k] <== d[t][k];
             sume[t].in[1][k] <== t1[t].out[k];
 
             suma[t].in[0][k] <== t1[t].out[k];
             suma[t].in[1][k] <== t2[t].out[k];
+        }
+
+        // Update sume and suma I and A
+        for (k=0; k<8; k++) {
+            range_I[8*48 + 8*64 + 8*64 + t*8 + k] = sume[t].range_I[k];
+            range_A[8*48 + 8*64 + 8*64 + t*8 + k] = sume[t].range_A[k];
+        }
+        for (k=0; k<8; k++) {
+            range_I[8*48 + 8*64 + 8*64 + 8*64 + t*8 + k] = suma[t].range_I[k];
+            range_A[8*48 + 8*64 + 8*64 + 8*64 + t*8 + k] = suma[t].range_A[k];
         }
 
         for (k=0; k<8; k++) {
@@ -233,6 +352,83 @@ template Sha256compression() {
         fsum[7].in[0][k] <==  hin[8*7+k];
         fsum[7].in[1][k] <==  h[64][k];
     }
+
+    // Update fsum I and A
+    for (k=0; k<8; k++) {
+        for (i=0; i<8; i++) {
+            range_I[8*48 + 8*64 + 8*64 + 8*64 + 8*64 + i*8 + k] = fsum[i].range_I[k];
+            range_A[8*48 + 8*64 + 8*64 + 8*64 + 8*64 + i*8 + k] = fsum[i].range_A[k];
+        }
+    }
+
+    // Lookups
+    // Generate M
+    for (i=0; i<6; i++) {
+        random_M[i] = multiplicity_generator_256(random_I_0[i], random_A_0[i], 8 * 48, random_T[i]);
+        random_M[i+6] = multiplicity_generator_256(random_I_1[i], random_A_1[i], 8 * 64, random_T[i+6]);
+    }
+
+    xor_M = multiplicity_generator_256(xor_I, xor_A, 32*48 + 24*64 + 32*64, xor_T);
+    not_M = multiplicity_generator_16(not_I, not_A, 8*64, not_T);
+    range_M = multiplicity_generator_16(range_I, range_A, 8*48 + 8*64 + 8*64 + 8*64 + 8*64, range_T);
+    and_M = multiplicity_generator_256(and_I, and_A, 40*64, and_T);
+
+    // Lookups
+    component id_lookup[6];
+    for (i=0; i<6; i++) {
+        id_lookup[i] = indexed_lookup(8 * 48, 256);
+
+        id_lookup[i].alpha <== alpha[i];
+        id_lookup[i].A <-- random_A_0[i];
+        id_lookup[i].I <-- random_I_0[i];
+        id_lookup[i].T <== random_T[i];
+        id_lookup[i].M <-- random_M[i];
+        lookup_out[i] <== id_lookup[i].out;
+    }
+
+    component id_lookup1[6];
+    for (i=0; i<6; i++) {
+        id_lookup1[i] = indexed_lookup(8 * 64, 256);
+
+        id_lookup1[i].alpha <== alpha[i+6];
+        id_lookup1[i].A <-- random_A_1[i];
+        id_lookup1[i].I <-- random_I_1[i];
+        id_lookup1[i].T <== random_T[i+6];
+        id_lookup1[i].M <-- random_M[i+6];
+        lookup_out[i+6] <== id_lookup1[i].out;
+    }
+
+    component xor_lookup = indexed_lookup(32*48 + 24*64 + 32*64, 256);
+    xor_lookup.alpha <== alpha[12];
+    xor_lookup.A <-- xor_A;
+    xor_lookup.I <-- xor_I;
+    xor_lookup.T <== xor_T;
+    xor_lookup.M <-- xor_M;
+    lookup_out[12] <== xor_lookup.out;
+
+    component not_lookup = indexed_lookup(8*64, 16);
+    not_lookup.alpha <== alpha[13];
+    not_lookup.A <-- not_A;
+    not_lookup.I <-- not_I;
+    not_lookup.T <== not_T;
+    not_lookup.M <-- not_M;
+    lookup_out[13] <== not_lookup.out;
+
+    component range_lookup = indexed_lookup(8*48 + 8*64 + 8*64 + 8*64 + 8*64 + 8*8, 16);
+    range_lookup.alpha <== alpha[14];
+    range_lookup.A <-- range_A;
+    range_lookup.I <-- range_I;
+    range_lookup.T <== range_T;
+    range_lookup.M <-- range_M;
+    lookup_out[14] <== range_lookup.out;
+
+    component and_lookup = indexed_lookup(40*64, 256);
+    and_lookup.alpha <== alpha[15];
+    and_lookup.A <-- and_A;
+    and_lookup.I <-- and_I;
+    and_lookup.T <== and_T;
+    and_lookup.M <-- and_M;
+    lookup_out[15] <== and_lookup.out;
 
     for (k=0; k<8; k++) {
         out[7-k]     === fsum[0].out[k];
