@@ -65,7 +65,7 @@ function and_function(index) {
 }
 
 function not_function(index) {
-    return ~index;
+    return index ^ 15;
 }
 
 function range_function(index) {

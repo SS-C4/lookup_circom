@@ -83,7 +83,7 @@ template Sha256compression() {
     // Create tables and arrays
     // alpha
     var alpha[16];
-    for (i=0; i<16; i++) alpha[i] = 1/(i + 131);
+    for (i=0; i<16; i++) alpha[i] = (i + 131244);
 
     // Random tables
     var random_T[12][256];
@@ -94,12 +94,12 @@ template Sha256compression() {
         random_T[3][j] = table_function(j, 10);
         random_T[4][j] = table_function(j, 11);
         random_T[5][j] = table_function(j, 12);
-        random_T[6][j] = table_function(j, 20);
-        random_T[7][j] = table_function(j, 21);
-        random_T[8][j] = table_function(j, 22);
-        random_T[9][j] = table_function(j, 30);
-        random_T[10][j] = table_function(j, 31);
-        random_T[11][j] = table_function(j, 32);
+        random_T[6][j] = table_function(j, 30);
+        random_T[7][j] = table_function(j, 31);
+        random_T[8][j] = table_function(j, 32);
+        random_T[9][j] = table_function(j, 20);
+        random_T[10][j] = table_function(j, 21);
+        random_T[11][j] = table_function(j, 22);
     }
 
     var random_M[12][256];
@@ -364,14 +364,72 @@ template Sha256compression() {
     // Lookups
     // Generate M
     for (i=0; i<6; i++) {
-        random_M[i] = multiplicity_generator_256(random_I_0[i], random_A_0[i], 8 * 48, random_T[i]);
-        random_M[i+6] = multiplicity_generator_256(random_I_1[i], random_A_1[i], 8 * 64, random_T[i+6]);
+        for (var t=0; t<256; t++) {
+            random_M[i][t] = 0;
+            random_M[i+6][t] = 0;
+        }
+        for (var t=0; t<256; t++) {
+            for (var j=0; j<8*48; j++) {
+                if (random_I_0[i][j] == t && random_A_0[i][j] == random_T[i][t]) {
+                    random_M[i][t] += 1;
+                }
+            }
+            for (var j=0; j<8*64; j++) {
+                if (random_I_1[i][j] == t && random_A_1[i][j] == random_T[i+6][t]) {
+                    random_M[i+6][t] += 1;
+                }
+            }
+        }
     }
 
-    xor_M = multiplicity_generator_256(xor_I, xor_A, 32*48 + 24*64 + 32*64, xor_T);
-    not_M = multiplicity_generator_16(not_I, not_A, 8*64, not_T);
-    range_M = multiplicity_generator_16(range_I, range_A, 8*48 + 8*64 + 8*64 + 8*64 + 8*64, range_T);
-    and_M = multiplicity_generator_256(and_I, and_A, 40*64, and_T);
+    // Multiplicity generation
+    // XOR
+    for (i=0; i<256; i++) {
+        xor_M[i] = 0;
+    }
+    for (var i=0; i<256; i++) {
+        for (var j=0; j<32*48 + 24*64 + 32*64; j++) {
+            if (xor_I[j] == i && xor_A[j] == xor_T[i]) {
+                xor_M[i] += 1;
+            }
+        }
+    }
+
+    // NOT
+    for (i=0; i<16; i++) {
+        not_M[i] = 0;
+    }
+    for (var i=0; i<16; i++) {
+        for (var j=0; j< 8*64; j++) {
+            if (not_I[j] == i && not_A[j] == not_T[i]) {
+                not_M[i] += 1;
+            }
+        }
+    }
+
+    // Range
+    for (i=0; i<16; i++) {
+        range_M[i] = 0;
+    }
+    for (var i=0; i<16; i++) {
+        for (var j=0; j< 8*48 + 8*64 + 8*64 + 8*64 + 8*64 + 8*8; j++) {
+            if (range_I[j] == i && range_A[j] == range_T[i]) {
+                range_M[i] += 1;
+            }
+        }
+    }
+
+    // AND
+    for (i=0; i<256; i++) {
+        and_M[i] = 0;
+    }
+    for (var i=0; i<256; i++) {
+        for (var j=0; j<40*64; j++) {
+            if (and_I[j] == i && and_A[j] == and_T[i]) {
+                and_M[i] += 1;
+            }
+        }
+    }
 
     // Lookups
     component id_lookup[6];

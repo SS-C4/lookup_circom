@@ -256,7 +256,7 @@ template Lookup_ssigma0() {
 }
 
 template call_ssigma0() {
-    signal input x[64];
+    signal input in[64];
     signal output out[64];
 
     signal x_nibbles[64 * 8];
@@ -284,7 +284,7 @@ template call_ssigma0() {
     // Accumulation
     for (var k=0; k<64; k++) {
         for (var i=0; i<8; i++) {
-            x_nibbles[k*8 + i] <-- (x[k] >> 4*i) & 15;
+            x_nibbles[k*8 + i] <-- (in[k] >> 4*i) & 15;
         }
 
         // Recomposition
@@ -292,7 +292,7 @@ template call_ssigma0() {
         for (var i=0; i<8; i++) {
             sum += x_nibbles[k*8 + i] * 16**i;
         }
-        sum === x[k];
+        sum === in[k];
 
         for (var i=0; i<3; i++) {
             for (var j=0; j<8; j++) {
@@ -343,7 +343,7 @@ template call_ssigma0() {
         for (var i=0; i<8; i++) {
             out_sum += xor_A[k*16 + 8 + i] * 16**i;
         }
-        assert(out_sum == ssigma0(x[k]));
+        assert(out_sum == ssigma0(in[k]));
     }
 
 }

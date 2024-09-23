@@ -5,10 +5,6 @@ pragma circom 2.0.0;
 
 include "random_tables.circom";
 
-function rrot(x, n) {
-    return ((x >> n) | (x << (32-n))) & 0xFFFFFFFF;
-}
-
 function bsigma0(x) {
     // return rrot(x,2) ^ rrot(x,13) ^ rrot(x,22);
     var x_nibbles[8];
